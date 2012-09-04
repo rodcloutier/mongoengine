@@ -3301,5 +3301,22 @@ class ValidatorErrorTest(unittest.TestCase):
         self.assertRaises(OperationError, change_shard_key)
 
 
+    def test_embedded_document_creation_with_dict(self):
+
+        class SubDoc(EmbeddedDocument):
+            val = IntField()
+
+        class Doc(Document):
+            e = EmbeddedDocumentField(SubDoc)
+            l = ListField(EmbeddedDocumentField(SubDoc))
+
+        d = Doc(e={'val':0}, l=[{'val':1},{'val':2}])
+        d.validate()
+
+        self.assertEqual(0, d.e.val)
+        self.assertEqual(1, d.l[0].val)
+        self.assertEqual(2, d.l[1].val)
+
+
 if __name__ == '__main__':
     unittest.main()

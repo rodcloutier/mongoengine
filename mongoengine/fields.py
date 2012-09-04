@@ -397,6 +397,7 @@ class ComplexDateTimeField(StringField):
 class EmbeddedDocumentField(BaseField):
     """An embedded document field - with a declared document_type.
     Only valid values are subclasses of :class:`~mongoengine.EmbeddedDocument`.
+    or a dictionnary representation of.
     """
 
     def __init__(self, document_type, **kwargs):
@@ -416,12 +417,18 @@ class EmbeddedDocumentField(BaseField):
                 self.document_type_obj = get_document(self.document_type_obj)
         return self.document_type_obj
 
+    def conform(self, value):
+        if isinstance(value, dict):
+            return self.document_type(**value)
+        return value
+
     def to_python(self, value):
         if not isinstance(value, self.document_type):
             return self.document_type._from_son(value)
         return value
 
     def to_mongo(self, value):
+        ## value = self.conform(value)
         if not isinstance(value, self.document_type):
             return value
         return self.document_type.to_mongo(value)
@@ -541,6 +548,11 @@ class ListField(ComplexBaseField):
         self.field = field
         kwargs.setdefault('default', lambda: [])
         super(ListField, self).__init__(**kwargs)
+
+    def conform(self, value):
+        if isinstance(value, (list, tuple)) and hasattr(self.field, 'conform'):
+            value = [self.field.conform(v) for v in value]
+        return value
 
     def validate(self, value):
         """Make sure that a list of valid fields is being used.

@@ -305,6 +305,9 @@ class ComplexBaseField(BaseField):
     def __set__(self, instance, value):
         """Descriptor for assigning a value to a field in a document.
         """
+        if hasattr(self.field, 'conform'):
+            value = self.field.conform(value)
+
         instance._data[self.name] = value
         instance._mark_as_changed(self.name)
 
@@ -859,6 +862,13 @@ class BaseDocument(object):
         signals.post_init.send(self.__class__, document=self)
 
     def __setattr__(self, name, value):
+
+        # Handle fields that have specific requirements
+        # ie EmbeddedDocumentField must have an instance of EmbeddedDocument
+        # but can be constructed with a dict
+        if name in self._fields and hasattr(self._fields[name], 'conform'):
+            value = self._fields[name].conform(value)
+
         # Handle dynamic data only if an initialised dynamic document
         if self._dynamic and not self._dynamic_lock:
 
